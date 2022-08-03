@@ -22,6 +22,11 @@ SRC_URI[sha256sum] = "9b12616e32cfc792f9dc841d9c472a41a35b85ba67d3a6eb427e307a6f
 
 S = "${WORKDIR}/${SRCNAME}-${PV}"
 
+#do_install () {
+#    install -d ${D}/${PYTHON_SITEPACKAGES_DIR}/gi/
+#    install -m 0655 ${PKG_CONFIG_SYSROOT_DIR}/usr/lib/libcairo-gobject.so.2 ${D}/${PYTHON_SITEPACKAGES_DIR}/gi/
+#}
+
 PACKAGECONFIG ??= "${@bb.utils.contains_any('DISTRO_FEATURES', [ 'directfb', 'wayland', 'x11' ], 'cairo', '', d)}"
 
 RDEPENDS:${PN} += "python3-pkgutil"
@@ -29,6 +34,7 @@ RDEPENDS:${PN} += "python3-pkgutil"
 # python3-pycairo is checked on configuration -> DEPENDS
 # we don't link against python3-pycairo -> RDEPENDS
 PACKAGECONFIG[cairo] = "-Dpycairo=enabled,-Dpycairo=disabled, cairo python3-pycairo, python3-pycairo"
+# FILES_${PN} = "${PYTHON_SITEPACKAGES_DIR}/*"
 
 BBCLASSEXTEND = "native"
 PACKAGECONFIG:class-native = ""
