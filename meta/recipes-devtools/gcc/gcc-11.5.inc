@@ -69,6 +69,8 @@ SRC_URI = "\
 	   file://0002-aarch64-add-armv9-a-to-march.patch \
 	   file://0003-aarch64-Enable-FP16-feature-by-default-for-Armv9.patch \
 	   file://0004-arm-add-armv9-a-architecture-to-march.patch \
+           ${@bb.utils.contains('DISTRO_FEATURES', 'leak_sanitizer use_lsan', 'file://0005-arm-lsan-support.patch', '', d)} \ 
+           ${@bb.utils.contains('DISTRO_FEATURES', 'leak_sanitizer', 'file://0006-relax_DEEPBIND_for_sanitizer.patch', '', d)} \
 "
 
 SRC_URI[sha256sum] = "a6e21868ead545cf87f0c01f84276e4b5281d672098591c1c896241f09363478"

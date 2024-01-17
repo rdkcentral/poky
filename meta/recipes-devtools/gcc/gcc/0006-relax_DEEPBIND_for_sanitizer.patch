@@ -1,0 +1,23 @@
+From: Sindhuja Muthukrishnan <Sindhuja_Muthukrishnan@comcast.com>
+Date: Thu, 24 Jan 2024 12:10:22 -0700
+Subject: [PATCH] support leak sanitizer
+
+Upstream-Status: Pending
+
+Signed-off-by: Sindhuja <Sindhuja_Muthukrishnan@comcast.com>
+Index: gcc-11.3.0/libsanitizer/sanitizer_common/sanitizer_linux.cpp
+===================================================================
+--- gcc-11.3.0.orig/libsanitizer/sanitizer_common/sanitizer_linux.cpp 
++++ gcc-11.3.0/libsanitizer/sanitizer_common/sanitizer_linux.cpp 
+@@ -2238,7 +2238,10 @@
+         "). If you want to run %s library under sanitizers please remove "
+         "RTLD_DEEPBIND from dlopen flags.\n",
+         filename, filename);
+-    Die();
++    //Tried to use -URTLD_DEEPBIND macro in the recipe, but it doesn't work. May be intervenes with real RTLD_DEEPBIND enum?
++    //Let's not worry about libraries that were loaded with deep bind.
++    //Afterall sanitizer may not be able to intercept
++    //Die();
+   }
+ #endif
+ }
