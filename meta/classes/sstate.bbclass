@@ -1006,7 +1006,7 @@ def sstate_checkhashes(sq_data, d, siginfo=False, currentcount=0, summary=True, 
             except bb.fetch2.FetchError as e:
                 bb.debug(2, "SState: Unsuccessful fetch test for %s (%s)\n%s" % (srcuri, repr(e), traceback.format_exc()))
             except Exception as e:
-                bb.error("SState: cannot test %s: %s\n%s" % (srcuri, repr(e), traceback.format_exc()))
+                bb.warn("SState: cannot test %s: %s\n%s" % (srcuri, repr(e), traceback.format_exc()))
 
             if progress:
                 bb.event.fire(bb.event.ProcessProgress(msg, len(tasklist) - thread_worker.tasks.qsize()), d)
