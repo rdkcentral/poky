@@ -97,7 +97,7 @@ CONFFILES:${PN} = " \
 
 ALTERNATIVE:${PN}-utils = "nslookup"
 ALTERNATIVE_LINK_NAME[nslookup] = "${bindir}/nslookup"
-ALTERNATIVE_PRIORITY = "100"
+ALTERNATIVE_PRIORITY = "40"
 
 PACKAGE_BEFORE_PN += "${PN}-utils"
 FILES:${PN}-utils = "${bindir}/host ${bindir}/dig ${bindir}/mdig ${bindir}/nslookup ${bindir}/nsupdate"
