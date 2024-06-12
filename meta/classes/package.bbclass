@@ -2182,7 +2182,6 @@ python package_do_pkgconfig () {
                             name = m.group(1)
                             val = m.group(2)
                             pd.setVar(name, pd.expand(val))
-
     for pkg in packages.split():
         pkgs_file = os.path.join(shlibswork_dir, pkg + ".pclist")
         if pkgconfig_provided[pkg] != []:
