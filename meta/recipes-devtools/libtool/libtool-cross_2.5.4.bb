@@ -1,7 +1,6 @@
 require libtool-${PV}.inc
 
 PACKAGES = ""
-SRC_URI += "file://fixinstall.patch"
 
 datadir = "${STAGING_DIR_TARGET}${target_datadir}"
 

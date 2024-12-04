@@ -3,8 +3,6 @@ require remove-buildpaths.inc
 
 FILESEXTRAPATHS =. "${FILE_DIRNAME}/libtool:"
 
-SRC_URI += "file://fixinstall.patch"
-
 inherit nativesdk
 
 S = "${WORKDIR}/libtool-${PV}"
