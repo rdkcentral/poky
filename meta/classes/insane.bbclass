@@ -827,7 +827,7 @@ def package_qa_check_rdepends(pkg, pkgdest, skip, taskdeps, packages, d):
                         break
             if filerdepends:
                 for key in filerdepends:
-                    if key in (d.getVar("FILES_IPK_PKG:%s"%pkg) or ""):
+                    if key.split("(")[0] in (d.getVar("FILES_IPK_PKG:%s"%pkg) or ""):
                         # Skip qa check for files from IPK
                         bb.warn("Skipping qa check for file %s which is available in IPK"%key)
                         continue
