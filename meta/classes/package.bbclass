@@ -2211,6 +2211,8 @@ python package_do_pkgconfig () {
                     found = True
             if found == False:
                 bb.note("couldn't find pkgconfig module '%s' in any package" % n)
+                if n not in (d.getVar('PKGCONFIGSKIPLIST_%s'%pkg) or "").split():
+                    d.appendVar('PKGCONFIGSKIPLIST_%s'%pkg,"%s "%(n))
         deps_file = os.path.join(pkgdest, pkg + ".pcdeps")
         if len(deps):
             with open(deps_file, 'w') as fd:
