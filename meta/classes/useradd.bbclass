@@ -146,7 +146,7 @@ python useradd_sysroot_sstate () {
     task = d.getVar("BB_CURRENTTASK")
     if task == "package_setscene":
         bb.build.exec_func("useradd_sysroot", d)
-    elif task == "prepare_recipe_sysroot":
+    elif task == "prepare_recipe_sysroot" or task == "install_ipk_recipe_sysroot":
         # Used to update this recipe's own sysroot so the user/groups are available to do_install
         scriptfile = d.expand("${RECIPE_SYSROOT}${bindir}/postinst-useradd-${PN}")
         bb.build.exec_func("useradd_sysroot", d)
