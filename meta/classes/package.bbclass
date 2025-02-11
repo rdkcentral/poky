@@ -1993,6 +1993,10 @@ python package_do_shlibs() {
                         deps.append(dep)
                     continue
             bb.note("Couldn't find shared library provider for %s, used by files: %s" % (n[0], n[1]))
+            # Storing the details of the shared libraries that don't have a provider. 
+            # This variable can be used to check whether any other prebuilt packages provide this.
+            if n[0] not in (d.getVar('SHLIBSKIPLIST_%s'%pkg) or "").split():
+                d.appendVar('SHLIBSKIPLIST_%s'%pkg,"%s "%(n[0]))
 
         deps_file = os.path.join(pkgdest, pkg + ".shlibdeps")
         if os.path.exists(deps_file):
