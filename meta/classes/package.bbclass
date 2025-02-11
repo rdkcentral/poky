@@ -1993,6 +1993,10 @@ python package_do_shlibs() {
                         deps.append(dep)
                     continue
             bb.note("Couldn't find shared library provider for %s, used by files: %s" % (n[0], n[1]))
+            # Storing the details of the shared libraries that don't have a provider. 
+            # This variable can be used to check whether any other prebuilt packages provide this.
+            if n[0] not in (d.getVar('SHLIBSKIPLIST_%s'%pkg) or "").split():
+                d.appendVar('SHLIBSKIPLIST_%s'%pkg,"%s "%(n[0]))
 
         deps_file = os.path.join(pkgdest, pkg + ".shlibdeps")
         if os.path.exists(deps_file):
@@ -2033,19 +2037,18 @@ python package_do_pkgconfig () {
                     with open(file, 'r') as f:
                         lines = f.readlines()
                     for l in lines:
+                        m = field_re.match(l)
+                        if m:
+                            hdr = m.group(1)
+                            exp = pd.expand(m.group(2))
+                            if hdr == 'Requires' or hdr == 'Requires.private':
+                                pkgconfig_needed[pkg] += exp.replace(',', ' ').split()
+                                continue
                         m = var_re.match(l)
                         if m:
                             name = m.group(1)
                             val = m.group(2)
                             pd.setVar(name, pd.expand(val))
-                            continue
-                        m = field_re.match(l)
-                        if m:
-                            hdr = m.group(1)
-                            exp = pd.expand(m.group(2))
-                            if hdr == 'Requires':
-                                pkgconfig_needed[pkg] += exp.replace(',', ' ').split()
-
     for pkg in packages.split():
         pkgs_file = os.path.join(shlibswork_dir, pkg + ".pclist")
         if pkgconfig_provided[pkg] != []:
@@ -2078,6 +2081,8 @@ python package_do_pkgconfig () {
                     found = True
             if found == False:
                 bb.note("couldn't find pkgconfig module '%s' in any package" % n)
+                if n not in (d.getVar('PKGCONFIGSKIPLIST_%s'%pkg) or "").split():
+                    d.appendVar('PKGCONFIGSKIPLIST_%s'%pkg,"%s "%(n))
         deps_file = os.path.join(pkgdest, pkg + ".pcdeps")
         if len(deps):
             with open(deps_file, 'w') as fd:
