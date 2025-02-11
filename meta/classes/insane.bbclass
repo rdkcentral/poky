@@ -821,6 +821,18 @@ def package_qa_check_rdepends(pkg, pkgdest, skip, taskdeps, packages, d):
                         break
             if filerdepends:
                 for key in filerdepends:
+                    if bb.data.inherits_class('base-deps-resolver', d):
+                        if key.split("(")[0] in (d.getVar("FILES_IPK_PKG:%s"%pkg) or ""):
+                            # Skip qa check for files from IPK
+                            bb.warn("Skipping qa check for file %s which is available in IPK"%key)
+                            continue
+                        else:
+                            # Check for non lib files from IPK
+                            ipk = get_rdeps_provider_ipk(d, key.split("(")[0])
+                            if ipk and ipk.strip().split(" ")[0] in rdepends:
+                                bb.warn("Skipping qa check for file %s which is available in IPK %s"%(key, ipk))
+                                continue
+
                     error_msg = "%s contained in package %s requires %s, but no providers found in RDEPENDS_%s?" % \
                             (filerdepends[key].replace("_%s" % pkg, "").replace("@underscore@", "_"), pkg, key, pkg)
                     package_qa_handle_error("file-rdeps", error_msg, d)
