@@ -33,7 +33,7 @@ CVE_CHECK_IGNORE += "CVE-2019-6470"
 inherit autotools update-rc.d systemd useradd pkgconfig multilib_header update-alternatives
 
 # PACKAGECONFIGs readline and libedit should NOT be set at same time
-PACKAGECONFIG ?= "readline"
+PACKAGECONFIG ?= "readline dns-over-http"
 PACKAGECONFIG[httpstats] = "--with-libxml2=${STAGING_DIR_HOST}${prefix},--without-libxml2,libxml2"
 PACKAGECONFIG[readline] = "--with-readline=readline,,readline"
 PACKAGECONFIG[libedit] = "--with-readline=libedit,,libedit"
@@ -97,7 +97,7 @@ CONFFILES:${PN} = " \
 
 ALTERNATIVE:${PN}-utils = "nslookup"
 ALTERNATIVE_LINK_NAME[nslookup] = "${bindir}/nslookup"
-ALTERNATIVE_PRIORITY = "100"
+ALTERNATIVE_PRIORITY = "40"
 
 PACKAGE_BEFORE_PN += "${PN}-utils"
 FILES:${PN}-utils = "${bindir}/host ${bindir}/dig ${bindir}/mdig ${bindir}/nslookup ${bindir}/nsupdate"

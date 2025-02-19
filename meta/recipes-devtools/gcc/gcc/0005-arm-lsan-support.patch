@@ -1,0 +1,19 @@
+From: Sindhuja Muthukrishnan <Sindhuja_Muthukrishnan@comcast.com>
+Date: Thu, 18 Jun 2024 12:10:22 -0700
+Subject: [PATCH] support lsan for ARM
+
+Upstream-Status: Pending
+
+Signed-off-by: Sindhuja <Sindhuja_Muthukrishnan@comcast.com>
+Index: gcc-9.3.0/libsanitizer/configure.tgt
+===================================================================
+--- gcc-9.3.0.orig/libsanitizer/configure.tgt
++++ gcc-9.3.0/libsanitizer/configure.tgt
+@@ -46,6 +46,7 @@ case "${target}" in
+   sparc*-*-solaris2.11*)
+ 	;;
+   arm*-*-linux*)
++        LSAN_SUPPORTED=yes
+ 	;;
+   mips*64*-*-linux*)
+ 	# This clause is only here to not match the supported mips*-*-linux*.
