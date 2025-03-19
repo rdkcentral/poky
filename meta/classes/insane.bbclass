@@ -834,8 +834,8 @@ def package_qa_check_rdepends(pkg, pkgdest, skip, taskdeps, packages, d):
                             continue
                         else:
                             # Check for non lib files from IPK
-                            ipk = get_rdeps_provider_ipk(d, key.split("(")[0])
-                            if ipk and ipk.strip().split(" ")[0] in rdepends:
+                            ipk = check_file_provider_ipk(d, key.split("(")[0], rdepends)
+                            if ipk:
                                 bb.warn("Skipping qa check for file %s which is available in IPK %s"%(key, ipk))
                                 continue
 
