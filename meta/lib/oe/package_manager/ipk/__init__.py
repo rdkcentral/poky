@@ -183,7 +183,11 @@ class OpkgPM(OpkgDpkgPM):
 
         self.from_feeds = (self.d.getVar('BUILD_IMAGES_FROM_FEEDS') or "") == "1"
         if self.from_feeds:
-            self._create_custom_config()
+            if bb.data.inherits_class('custom-rootfs-creation', d):
+                from oe.sls_utils import sls_opkg_conf
+                sls_opkg_conf (d, self.config_file)
+            else:
+                self._create_custom_config()
         else:
             self._create_config()
 
