@@ -2,11 +2,11 @@ require gcc-common.inc
 
 # Third digit in PV should be incremented after a minor release
 
-PV = "11.5.0"
+PV = "11.3.0"
 
 # BINV should be incremented to a revision after a minor gcc release
 
-BINV = "11.5.0"
+BINV = "11.3.0"
 
 FILESEXTRAPATHS =. "${FILE_DIRNAME}/gcc:${FILE_DIRNAME}/gcc/backport:"
 
@@ -48,6 +48,7 @@ SRC_URI = "\
            file://0016-If-CXXFLAGS-contains-something-unsupported-by-the-bu.patch \
            file://0017-handle-sysroot-support-for-nativesdk-gcc.patch \
            file://0018-Search-target-sysroot-gcc-version-specific-dirs-with.patch \
+           file://0019-nios2-Define-MUSL_DYNAMIC_LINKER.patch \
            file://0020-Add-ssp_nonshared-to-link-commandline-for-musl-targe.patch \
            file://0021-Link-libgcc-using-LDFLAGS-not-just-SHLIB_LDFLAGS.patch \
            file://0022-sync-gcc-stddef.h-with-musl.patch \
@@ -59,13 +60,12 @@ SRC_URI = "\
            file://0028-debug-101473-apply-debug-prefix-maps-before-checksum.patch \
            file://0029-Fix-install-path-of-linux64.h.patch \
            file://0030-rust-recursion-limit.patch \
-           file://0031-gcc-sanitizers-fix.patch \
            file://0001-CVE-2021-42574.patch \
            file://0002-CVE-2021-42574.patch \
            file://0003-CVE-2021-42574.patch \
            file://0004-CVE-2021-42574.patch \
            file://0001-CVE-2021-46195.patch \
-           file://0001-aarch64-Update-Neoverse-N2-core-definition.patch \
+	   file://0001-aarch64-Update-Neoverse-N2-core-defini.patch \
 	   file://0002-aarch64-add-armv9-a-to-march.patch \
 	   file://0003-aarch64-Enable-FP16-feature-by-default-for-Armv9.patch \
 	   file://0004-arm-add-armv9-a-architecture-to-march.patch \
@@ -73,13 +73,13 @@ SRC_URI = "\
            ${@bb.utils.contains('DISTRO_FEATURES', 'leak_sanitizer', 'file://0006-relax_DEEPBIND_for_sanitizer.patch', '', d)} \
 "
 
-SRC_URI[sha256sum] = "a6e21868ead545cf87f0c01f84276e4b5281d672098591c1c896241f09363478"
+SRC_URI[sha256sum] = "b47cf2818691f5b1e21df2bb38c795fac2cfbd640ede2d0a5e1c89e338a3ac39"
 
 S = "${TMPDIR}/work-shared/gcc-${PV}-${PR}/gcc-${PV}"
 
 # For dev release snapshotting
 #S = "${TMPDIR}/work-shared/gcc-${PV}-${PR}/gcc-${RELEASE}"
-B = "${WORKDIR}/gcc-${PV}/build.${HOST_SYS}.${TARGET_SYS}"
+#B = "${WORKDIR}/gcc-${PV}/build.${HOST_SYS}.${TARGET_SYS}"
 
 # Language Overrides
 FORTRAN = ""
@@ -124,6 +124,3 @@ EXTRA_OECONF_PATHS = "\
 
 # Is a binutils 2.26 issue, not gcc
 CVE_CHECK_IGNORE += "CVE-2021-37322"
-
-# This is fixed by commit 75c37e0314, nvd uses arm versioning (2023-09-12) which will alway be higher than 11.x
-CVE_CHECK_IGNORE += "CVE-2023-4039"
