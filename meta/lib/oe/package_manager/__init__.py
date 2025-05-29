@@ -385,12 +385,24 @@ class PackageManager(object, metaclass=ABCMeta):
             if exclude:
                 cmd.extend(['--exclude=' + '|'.join(exclude.split())])
             try:
-                bb.note('Running %s' % cmd)
-                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = proc.communicate()
-                if stderr: bb.note(stderr.decode("utf-8"))
-                complementary_pkgs = stdout.decode("utf-8")
-                complementary_pkgs = set(complementary_pkgs.split())
+                build_from_feeds = self.d.getVar("BUILD_IMAGES_FROM_FEEDS")
+                if build_from_feeds == "1":
+                    bb.note("Fetching the dbg package info from FEED_INFO_DIR")
+                    feed_info_dir = self.d.getVar('FEED_INFO_DIR')
+                    complementary_pkgs = set()
+                    for root, dirs, files in os.walk(feed_info_dir):
+                        for package in files:
+                            if package.endswith("-dbg"):
+                                complementary_pkgs.add(os.path.basename(package))
+                else:
+                    bb.note("Fetching the dbg package info from local pkgdata")
+                    bb.note('Running %s' % cmd)
+                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    stdout, stderr = proc.communicate()
+                    if stderr: bb.note(stderr.decode("utf-8"))
+                    complementary_pkgs = stdout.decode("utf-8")
+                    complementary_pkgs = set(complementary_pkgs.split())
+
                 skip_pkgs = sorted(complementary_pkgs & provided_pkgs)
                 install_pkgs = sorted(complementary_pkgs - provided_pkgs)
                 bb.note("Installing complementary packages ... %s (skipped already provided packages %s)" % (
