@@ -386,16 +386,17 @@ class PackageManager(object, metaclass=ABCMeta):
                 cmd.extend(['--exclude=' + '|'.join(exclude.split())])
             try:
                 build_from_feeds = self.d.getVar("BUILD_IMAGES_FROM_FEEDS")
-                if build_from_feeds == "1":
-                    bb.note("Fetching the dbg package info from FEED_INFO_DIR")
+                if build_from_feeds == "1" and globs:
+                    suffix = globs.lstrip("*")  # Remove the '*' from the glob
+                    bb.note("Fetching the complimentary package info from FEED_INFO_DIR")
                     feed_info_dir = self.d.getVar('FEED_INFO_DIR')
                     complementary_pkgs = set()
                     for root, dirs, files in os.walk(feed_info_dir):
                         for package in files:
-                            if package.endswith("-dbg"):
+                            if package.endswith(suffix):
                                 complementary_pkgs.add(os.path.basename(package))
                 else:
-                    bb.note("Fetching the dbg package info from local pkgdata")
+                    bb.note("Fetching the complimentary package info from local pkgdata")
                     bb.note('Running %s' % cmd)
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     stdout, stderr = proc.communicate()
