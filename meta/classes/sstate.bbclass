@@ -10,9 +10,10 @@ def generate_sstatefn(spec, hash, taskname, siginfo, d):
        return ""
     extension = ".tar.zst"
     # 8 chars reserved for siginfo
-    limit = 254 - 8
+    # 4 chars for ".tmp" extention when signinfo file is downloaded from sstate mirror using wget
+    limit = 254 - (8+4)
     if siginfo:
-        limit = 254
+        limit = 254 - 4
         extension = ".tar.zst.siginfo"
     if not hash:
         hash = "INVALID"
