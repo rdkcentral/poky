@@ -16,9 +16,9 @@ def generate_sstatefn(spec, hash, taskname, siginfo, d):
        return ""
     extension = ".tar.zst"
     # 8 chars reserved for siginfo
-    limit = 254 - 8
+    limit = 250 - 8
     if siginfo:
-        limit = 254
+        limit = 250
         extension = ".tar.zst.siginfo"
     if not hash:
         hash = "INVALID"
