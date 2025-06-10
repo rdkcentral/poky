@@ -210,7 +210,7 @@ python multilib_virtclass_handler_global () {
             import oe.classextend
             clsextends = []
             for variant in variants:
-                clsextends.append(oe.classextend.ClassExtender(variant, localdata))
+                clsextends.append(oe.classextend.ClassExtender(variant, variants, localdata))
 
             # Process PROVIDES
             origprovs = provs = localdata.getVar("PROVIDES") or ""

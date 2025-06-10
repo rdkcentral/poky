@@ -99,14 +99,15 @@ python () {
 
     import oe.classextend
 
-    clsextend = oe.classextend.NativesdkClassExtender("nativesdk", d)
+    clsextend = oe.classextend.ClassExtender("nativesdk", [], d)
     clsextend.rename_packages()
     clsextend.rename_package_variables((d.getVar("PACKAGEVARS") or "").split())
 
-    clsextend.map_depends_variable("DEPENDS")
-    clsextend.map_depends_variable("PACKAGE_WRITE_DEPS")
+    d.setVarFlag("DEPENDS", "filter", "oe.classextend.suffix_filter(val, 'nativesdk', [])")
+    d.setVarFlag("PACKAGE_WRITE_DEPS", "filter", "oe.classextend.suffix_filter(val, 'nativesdk', [])")
     clsextend.map_packagevars()
-    clsextend.map_variable("PROVIDES")
+    d.setVarFlag("PROVIDES", "filter", "oe.classextend.suffix_filter(val, 'nativesdk', [])")
+
     clsextend.map_regexp_variable("PACKAGES_DYNAMIC")
     d.setVar("LIBCEXTENSION", "")
     d.setVar("ABIEXTENSION", "")

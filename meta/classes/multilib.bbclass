@@ -112,11 +112,11 @@ python __anonymous () {
         variant = d.getVar("BBEXTENDVARIANT")
         import oe.classextend
 
-        clsextend = oe.classextend.ClassExtender(variant, d)
-
-        clsextend.map_depends_variable("PACKAGE_INSTALL")
-        clsextend.map_depends_variable("LINGUAS_INSTALL")
-        clsextend.map_depends_variable("RDEPENDS")
+        prefixes = (d.getVar("MULTILIB_VARIANTS") or "").split()
+        clsextend = oe.classextend.ClassExtender(variant, prefixes, d)
+        d.setVarFlag("PACKAGE_INSTALL", "filter", "oe.classextend.suffix_filter(val, '" + variant + "', " + str(prefixes) + ")")
+        d.setVarFlag("LINUGAS_INSTALL", "filter", "oe.classextend.suffix_filter(val, '" + variant + "', " + str(prefixes) + ")")
+        d.setVarFlag("RDEPENDS", "filter", "oe.classextend.suffix_filter(val, '" + variant + "', " + str(prefixes) + ")")
         pinstall = d.getVar("LINGUAS_INSTALL") + " " + d.getVar("PACKAGE_INSTALL")
         d.setVar("PACKAGE_INSTALL", pinstall)
         d.setVar("LINGUAS_INSTALL", "")
@@ -136,13 +136,14 @@ python multilib_virtclass_handler_postkeyexp () {
 
     import oe.classextend
 
-    clsextend = oe.classextend.ClassExtender(variant, d)
-
     if bb.data.inherits_class('image', d):
         return
 
-    clsextend.map_depends_variable("DEPENDS")
-    clsextend.map_depends_variable("PACKAGE_WRITE_DEPS")
+    prefixes = (d.getVar("MULTILIB_VARIANTS") or "").split()
+    clsextend = oe.classextend.ClassExtender(variant, prefixes, d)
+
+    d.setVarFlag("DEPENDS", "filter", "oe.classextend.suffix_filter(val, '" + variant + "', " + str(prefixes) + ")")
+    d.setVarFlag("PACKAGE_WRITE_DEPS", "filter", "oe.classextend.suffix_filter(val, '" + variant + "', " + str(prefixes) + ")")
     clsextend.map_variable("PROVIDES")
 
     if bb.data.inherits_class('cross-canadian', d):
