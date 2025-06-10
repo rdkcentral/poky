@@ -33,6 +33,8 @@ FILTERS = {k: getattr(builtins, k) for k in ALLOWED_BUILTINS}
 
 
 def apply_filters(val, expressions, *, default_globals=True, extra_globals={}):
+    import oe
+
     if default_globals:
         g = FILTERS.copy()
     else:
@@ -40,18 +42,21 @@ def apply_filters(val, expressions, *, default_globals=True, extra_globals={}):
 
     g.update(extra_globals)
 
+    g2 = globals()
+    g2['oe'] = oe
+
     # Purposely blank out __builtins__ which prevents users from
     # calling any normal builtin python functions
-    g["__builtins__"] = {}
+    #g["__builtins__"] = {}
 
     for e in expressions:
         if not e:
             continue
 
         # Set val as a local so it can be cleared out while keeping the globals
-        l = {"v": val}
+        l = {"val": val}
 
-        val = eval(e, g, l)
+        val = eval(e, g2, l)
 
     return val
 
