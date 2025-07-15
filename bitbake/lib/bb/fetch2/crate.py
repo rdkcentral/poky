@@ -56,12 +56,14 @@ class Crate(Wget):
         if len(parts) < 5:
             raise bb.fetch2.ParameterError("Invalid URL: Must be crate://HOST/NAME/VERSION", ud.url)
 
-        # last field is version
-        version = parts[len(parts) - 1]
+        # version is expected to be the last token
+        # but ignore possible url parameters which will be used
+        # by the top fetcher class
+        version = parts[-1].split(";")[0]
         # second to last field is name
-        name = parts[len(parts) - 2]
+        name = parts[-2]
         # host (this is to allow custom crate registries to be specified
-        host = '/'.join(parts[2:len(parts) - 2])
+        host = '/'.join(parts[2:-2])
 
         # if using upstream just fix it up nicely
         if host == 'crates.io':
