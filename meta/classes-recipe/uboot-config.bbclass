@@ -137,12 +137,13 @@ python () {
                         d.appendVar('UBOOT_BINARIES', ' ' + ubootbinary)
                     break
 
-            if not found:
-                raise bb.parse.SkipRecipe("The selected UBOOT_CONFIG key %s has no match in %s." % (ubootconfig, ubootconfigflags.keys()))
-
             # This recipe might be inherited e.g. by the kernel recipe via kernel-fitimage.bbclass
             # Ensure the uboot specific menuconfig settings do not leak into other recipes
             if 'u-boot' in recipename:
+                # Do UBOOT_CONFIG validation only if the package is u-boot
+                if not found:
+                    raise bb.parse.SkipRecipe("The selected UBOOT_CONFIG key %s has no match in %s." % (ubootconfig, ubootconfigflags.keys()))
+
                 if len(ubootconfig) == 1:
                     d.setVar('KCONFIG_CONFIG_ROOTDIR', os.path.join(d.getVar("B"), d.getVar("UBOOT_MACHINE").strip()))
                 else:
