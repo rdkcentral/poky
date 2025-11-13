@@ -995,8 +995,6 @@ class DataSmart(MutableMapping):
         # Instead, we're careful with writes.
         data.overridedata = copy.copy(self.overridedata)
 
-        data.overridedata = copy.copy(self.overridedata)
-
         return data
 
     def expandVarref(self, variable, parents=False):
