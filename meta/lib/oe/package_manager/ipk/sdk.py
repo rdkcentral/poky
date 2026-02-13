@@ -43,8 +43,7 @@ class PkgSdk(Sdk):
     def _populate_sysroot(self, pm, manifest):
         pkgs_to_install = manifest.parse_initial_manifest()
 
-        if (self.d.getVar('BUILD_IMAGES_FROM_FEEDS') or "") != "1":
-            pm.write_index()
+        pm.write_index()
 
         pm.update()
 
