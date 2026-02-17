@@ -42,9 +42,10 @@ class PkgSdk(Sdk):
 
     def _populate_sysroot(self, pm, manifest):
         pkgs_to_install = manifest.parse_initial_manifest()
-
-        if (self.d.getVar('BUILD_IMAGES_FROM_FEEDS') or "") != "1":
-            pm.write_index()
+        # Irrespective of BUILD_IMAGES_FROM_FEEDS, the index should be created similar to do_rootfs.
+        # This variable can be used to include both remote and local feeds.
+        # If this check is present, the index will not be created for local feeds.
+        pm.write_index()
 
         pm.update()
 
