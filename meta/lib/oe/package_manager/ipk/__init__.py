@@ -180,8 +180,9 @@ class OpkgPM(OpkgDpkgPM):
         self.saved_opkg_dir = self.d.expand('${T}/saved/%s' % self.task_name)
         if not os.path.exists(self.d.expand('${T}/saved')):
             bb.utils.mkdirhier(self.d.expand('${T}/saved'))
-
-        self.from_feeds = (self.d.getVar('BUILD_IMAGES_FROM_FEEDS') or "") == "1"
+        # custom feed config is only required for targets which is configured through IPK_FEED_URIS.
+        # IPKGCONF_SDK is for host feeds which are not configured through IPK_FEED_URIS.
+        self.from_feeds = (self.d.getVar('BUILD_IMAGES_FROM_FEEDS') or "") == "1" and not self.config_file == d.getVar("IPKGCONF_SDK")
         if self.from_feeds:
             if bb.data.inherits_class('custom-rootfs-creation', d):
                 from oe.sls_utils import sls_opkg_conf
