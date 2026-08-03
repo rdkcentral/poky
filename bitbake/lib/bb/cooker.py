@@ -550,7 +550,7 @@ class BBCooker:
         logger.plain("%-35s %25s %25s %25s", "Recipe Name", "Latest Version", "Preferred Version", "Required Version")
         logger.plain("%-35s %25s %25s %25s\n", "===========", "==============", "=================", "================")
         all_recipes = set(self.recipecaches[''].pkg_pn.keys())
-        output_file = f"{self.data.getVar('TOPDIR')}/recipe_versions.txt"
+        output_file = os.path.join(self.data.getVar('TOPDIR'), "recipe_versions.txt")
         with open(output_file, "w") as f:
             for p in sorted(self.recipecaches[''].pkg_pn):
                 preferred = preferred_versions[p]
