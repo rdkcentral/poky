@@ -549,26 +549,33 @@ class BBCooker:
 
         logger.plain("%-35s %25s %25s %25s", "Recipe Name", "Latest Version", "Preferred Version", "Required Version")
         logger.plain("%-35s %25s %25s %25s\n", "===========", "==============", "=================", "================")
-
-        for p in sorted(self.recipecaches[''].pkg_pn):
-            preferred = preferred_versions[p]
-            latest = latest_versions[p]
-            requiredstr = ""
-            preferredstr = ""
-            if required[p]:
-                if preferred[0] is not None:
-                    requiredstr = preferred[0][0] + ":" + preferred[0][1] + '-' + preferred[0][2]
-                else:
-                    bb.fatal("REQUIRED_VERSION of package %s not available" % p)
-            else:
-                preferredstr = preferred[0][0] + ":" + preferred[0][1] + '-' + preferred[0][2]
-
-            lateststr = latest[0][0] + ":" + latest[0][1] + "-" + latest[0][2]
-
-            if preferred == latest:
+        all_recipes = set(self.recipecaches[''].pkg_pn.keys())
+        output_file = os.path.join(self.data.getVar('TOPDIR'), "recipe_versions.txt")
+        with open(output_file, "w") as f:
+            for p in sorted(self.recipecaches[''].pkg_pn):
+                preferred = preferred_versions[p]
+                latest = latest_versions[p]
+                requiredstr = ""
                 preferredstr = ""
+                if required[p]:
+                    if preferred[0] is not None:
+                        requiredstr = preferred[0][0] + ":" + preferred[0][1] + '-' + preferred[0][2]
+                    else:
+                        bb.fatal("REQUIRED_VERSION of package %s not available" % p)
+                else:
+                    preferredstr = preferred[0][0] + ":" + preferred[0][1] + '-' + preferred[0][2]
 
-            logger.plain("%-35s %25s %25s %25s", p, lateststr, preferredstr, requiredstr)
+                lateststr = latest[0][0] + ":" + latest[0][1] + "-" + latest[0][2]
+
+                if preferred == latest:
+                    preferredstr = ""
+                if "-native" not in p and "-cross" not in p and "-sdk" not in p and "nativesdk" not in p:
+                    if p.startswith("lib32-"):
+                        base_recipe = p[6:]
+                        if base_recipe in all_recipes:
+                            continue
+                    f.write(f"{p}|{lateststr}|{preferredstr}|{requiredstr}\n")
+                logger.plain("%-35s %25s %25s %25s", p, lateststr, preferredstr, requiredstr)
 
     def showEnvironment(self, buildfile=None, pkgs_to_build=None):
         """
