@@ -602,7 +602,7 @@ addtask do_create_spdx_setscene
 do_create_spdx[dirs] = "${SPDXWORK}"
 do_create_spdx[cleandirs] = "${SPDXDEPLOY} ${SPDXWORK}"
 do_create_spdx[depends] += "${PATCHDEPENDENCY}"
-do_create_spdx[deptask] = "do_create_spdx"
+do_create_spdx[deptask] = ""
 
 def collect_package_providers(d):
     from pathlib import Path
@@ -766,6 +766,123 @@ do_create_runtime_spdx[dirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[cleandirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[rdeptask] = "do_create_spdx"
 
+VENDOR_SPDX_TARBALL ??= ""
+MW_SPDX_TARBALL ??= ""
+
+do_rootfs[vardeps] += "VENDOR_SPDX_TARBALL MW_SPDX_TARBALL"
+
+def get_spdx_archive(location, d):
+    import bb.fetch2
+    from pathlib import Path
+    from urllib.parse import urlparse
+
+    parsed = urlparse(location)
+
+    if parsed.scheme == "file":
+        archive = Path(parsed.path)
+
+    elif parsed.scheme:
+        bb.note("Fetching SPDX bundle: %s" % location)
+
+        fetcher = bb.fetch2.Fetch([location], d)
+        fetcher.download()
+
+        archive = Path(fetcher.localpath(location))
+
+    else:
+        archive = Path(location)
+
+    if not archive.exists():
+        bb.fatal("SPDX archive not found: %s" % location)
+
+    return archive
+
+def import_dependency_spdx(d):
+    import os
+    import tarfile
+    import tempfile
+    import shutil
+    import bb.utils
+    from pathlib import Path
+
+    deploy_dir = Path(d.getVar("DEPLOY_DIR_SPDX"))
+
+    tarballs = [
+        d.getVar("VENDOR_SPDX_TARBALL"),
+        d.getVar("MW_SPDX_TARBALL"),
+    ]
+
+    lockfile = deploy_dir / ".spdx-import.lock"
+    lock = bb.utils.lockfile(str(lockfile))
+
+    try:
+        for location in tarballs:
+
+            if not location:
+                continue
+
+            tmpdir = Path(tempfile.mkdtemp())
+
+            try:
+                archive = get_spdx_archive(location, d)
+
+                bb.note("Importing SPDX bundle: %s" % location)
+
+                with tarfile.open(archive, mode="r:*") as tf:
+
+                    tmpdir_resolved = str(tmpdir.resolve())
+
+                    for member in tf.getmembers():
+
+                        member_path = str((tmpdir / member.name).resolve())
+
+                        if not (member_path == tmpdir_resolved or
+                                member_path.startswith(tmpdir_resolved + os.sep)):
+                            bb.fatal("Unsafe SPDX path: %s" % member.name)
+
+                        if member.issym() or member.islnk():
+
+                            link_target = str(
+                                ((tmpdir / member.name).parent /
+                                 member.linkname).resolve()
+                            )
+
+                            if not (link_target == tmpdir_resolved or
+                                    link_target.startswith(tmpdir_resolved + os.sep)):
+                                bb.fatal("Unsafe SPDX link: %s -> %s" %
+                                         (member.name, member.linkname))
+
+                    tf.extractall(tmpdir)
+
+                for dirname in (
+                    "packages",
+                    "runtime",
+                    "recipes",
+                    "by-namespace",
+                ):
+                    src = tmpdir / dirname
+
+                    if not src.exists():
+                        continue
+
+                    dst = deploy_dir / dirname
+                    dst.mkdir(parents=True, exist_ok=True)
+
+                    for item in src.iterdir():
+
+                        target = dst / item.name
+
+                        if not target.exists():
+                            shutil.copy2(item, target)
+
+                bb.note("SPDX import completed")
+
+            finally:
+                shutil.rmtree(tmpdir, ignore_errors=True)
+
+    finally:
+        bb.utils.unlockfile(lock)
+
 def spdx_get_src(d):
     """
     save patched source of the recipe in SPDX_WORKDIR.
@@ -836,6 +953,8 @@ python image_combine_spdx() {
     image_link_name = d.getVar("IMAGE_LINK_NAME")
     imgdeploydir = Path(d.getVar("IMGDEPLOYDIR"))
     img_spdxid = oe.sbom.get_image_spdxid(image_name)
+    # Import Vendor/MW SPDX files
+    import_dependency_spdx(d)
     packages = image_list_installed_packages(d)
 
     combine_spdx(d, image_name, imgdeploydir, img_spdxid, packages)
