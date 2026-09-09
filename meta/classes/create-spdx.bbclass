@@ -769,7 +769,7 @@ do_create_runtime_spdx[rdeptask] = "do_create_spdx"
 #
 # SPDX bundle import support
 #
-# Arikrishnan G (Comcast)
+# Arikrishnan G (arikrishnan_g@comcast.com)
 # Added support for importing external Vendor and Middleware SPDX bundles
 # during image SBOM generation. This includes bundle retrieval through
 # BitBake's fetch infrastructure, secure archive validation/extraction,
