@@ -748,6 +748,10 @@ def sstate_package(ss, d):
 
 sstate_package[vardepsexclude] += "SSTATE_SIG_KEY"
 
+def sstate_manifest_active(d):
+    return "HASHEQUIVALENCE" in (d.getVar("DISTRO_FEATURES") or "").split() and \
+           os.path.isfile(d.expand("${TOPDIR}/sstate-manifest.txt"))
+
 def pstaging_fetch(sstatefetch, d):
     import bb.fetch2
 
@@ -785,7 +789,8 @@ def pstaging_fetch(sstatefetch, d):
         localdata.setVar('SRC_URI', srcuri)
         try:
             fetcher = bb.fetch2.Fetch([srcuri], localdata, cache=False)
-            fetcher.checkstatus()
+            if not sstate_manifest_active(d):
+                fetcher.checkstatus()
             fetcher.download()
 
         except bb.fetch2.BBFetchException:
@@ -925,6 +930,17 @@ def sstate_checkhashes(sq_data, d, siginfo=False, currentcount=0, summary=True, 
     found = set()
     missed = set()
 
+    manifest = None
+    manifest_loaded = False
+    if sstate_manifest_active(d):
+        manifest_path = d.expand("${TOPDIR}/sstate-manifest.txt")
+        if os.path.isfile(manifest_path):
+            with open(manifest_path, "r") as manifest_file:
+                manifest = {line.strip() for line in manifest_file if line.strip()}
+            manifest_loaded = True
+            bb.debug(1, "SState: Using HE sstate manifest %s (%d entries)" %
+                     (manifest_path, len(manifest)))
+
     def gethash(task):
         return sq_data['unihash'][task]
 
@@ -960,9 +976,17 @@ def sstate_checkhashes(sq_data, d, siginfo=False, currentcount=0, summary=True, 
             missed.add(tid)
             bb.debug(2, "SState: Looked for but didn't find file %s" % sstatefile)
 
+    if manifest_loaded:
+        for tid in list(missed):
+            sstatefile = getsstatefile(tid, siginfo, d)
+            if sstatefile in manifest:
+                found.add(tid)
+                missed.remove(tid)
+                bb.debug(2, "SState: Manifest contains %s" % sstatefile)
+
     foundLocal = len(found)
     mirrors = d.getVar("SSTATE_MIRRORS")
-    if mirrors:
+    if mirrors and not manifest_loaded:
         # Copy the data object and override DL_DIR and SRC_URI
         localdata = bb.data.createCopy(d)
 
