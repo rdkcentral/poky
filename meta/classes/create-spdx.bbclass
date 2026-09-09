@@ -766,6 +766,17 @@ do_create_runtime_spdx[dirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[cleandirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[rdeptask] = "do_create_spdx"
 
+#
+# SPDX bundle import support
+#
+# Arikrishnan G (Comcast)
+# Added support for importing external Vendor and Middleware SPDX bundles
+# during image SBOM generation. This includes bundle retrieval through
+# BitBake's fetch infrastructure, secure archive validation/extraction,
+# and merging imported SPDX documents into DEPLOY_DIR_SPDX for combined
+# image SPDX creation.
+#
+
 VENDOR_SPDX_TARBALL ??= ""
 MW_SPDX_TARBALL ??= ""
 
