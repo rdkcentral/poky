@@ -164,7 +164,7 @@ python () {
     d.setVar('SSTATETASKS', " ".join(unique_tasks))
     for task in unique_tasks:
         d.appendVarFlag(task, 'vardeps', " SSTATE_PV_INVARIANT")
-        if task in ("do_populate_sysroot", "do_populate_sysroot_interface"):
+        if task == "do_populate_sysroot":
             d.appendVarFlag(task, 'vardeps',
                             " HASHEQUIV_ABI_AWARE_SHLIBS HASHEQUIV_ABI_HASH_VERSION HASHEQUIV_ABI_ONLY_SHLIBS")
         d.prependVarFlag(task, 'prefuncs', "sstate_task_prefunc ")
@@ -174,7 +174,6 @@ python () {
         d.setVarFlag(task, 'postfuncs', " ".join(newpostfuncs))
         d.setVarFlag(task, 'network', '1')
         d.setVarFlag(task + "_setscene", 'network', '1')
-
 }
 
 def sstate_init(task, d):
