@@ -164,9 +164,8 @@ python () {
     d.setVar('SSTATETASKS', " ".join(unique_tasks))
     for task in unique_tasks:
         d.appendVarFlag(task, 'vardeps', " SSTATE_PV_INVARIANT")
-        if task == "do_populate_sysroot":
-            d.appendVarFlag(task, 'vardeps',
-                            " HASHEQUIV_ABI_AWARE_SHLIBS HASHEQUIV_ABI_HASH_VERSION HASHEQUIV_ABI_ONLY_SHLIBS")
+        d.appendVarFlag(task, 'vardeps',
+                        " HASHEQUIV_ABI_AWARE_SHLIBS HASHEQUIV_ABI_HASH_VERSION HASHEQUIV_ABI_ONLY_SHLIBS")
         d.prependVarFlag(task, 'prefuncs', "sstate_task_prefunc ")
         # Generally sstate should be last, execpt for buildhistory functions
         postfuncs = (d.getVarFlag(task, 'postfuncs') or "").split()

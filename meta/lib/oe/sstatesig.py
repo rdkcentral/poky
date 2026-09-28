@@ -516,12 +516,10 @@ def OEOuthashBasic(path, sigfile, task, d):
 
     # When enabled, ELF shared libraries are hashed using a normalized public
     # ABI descriptor rather than their full file content. Inspection failures
-    # still use content hashing. ABI-only traversal is restricted to
-    # populate_sysroot so package outputs remain content-sensitive.
-    abi_aware_shlibs = (d.getVar('HASHEQUIV_ABI_AWARE_SHLIBS') == '1' and
-                        task == 'populate_sysroot')
-    abi_only_shlibs = (d.getVar('HASHEQUIV_ABI_ONLY_SHLIBS') == '1' and
-                       task == 'populate_sysroot')
+    # still use content hashing. This experimental mode intentionally applies
+    # to every sstate task to evaluate broader dependency rebuild reduction.
+    abi_aware_shlibs = d.getVar('HASHEQUIV_ABI_AWARE_SHLIBS') == '1'
+    abi_only_shlibs = d.getVar('HASHEQUIV_ABI_ONLY_SHLIBS') == '1'
     abi_hash_version = d.getVar('HASHEQUIV_ABI_HASH_VERSION') or '4'
     readelf = d.getVar('READELF')
 
