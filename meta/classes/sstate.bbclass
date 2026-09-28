@@ -175,10 +175,6 @@ python () {
         d.setVarFlag(task, 'network', '1')
         d.setVarFlag(task + "_setscene", 'network', '1')
 
-    if d.getVar('SSTATE_PV_INVARIANT') == '1':
-        for task in ("do_compile", "do_install", "do_populate_sysroot",
-                     "do_populate_sysroot_interface"):
-            d.appendVarFlag(task, 'vardepsexclude', " PV PR")
 }
 
 def sstate_init(task, d):
