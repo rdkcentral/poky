@@ -34,8 +34,11 @@ def generate_sstatefn(spec, hash, taskname, siginfo, d):
     return hash[:2] + "/" + hash[2:4] + "/" + fn
 
 SSTATE_PKGARCH    = "${PACKAGE_ARCH}"
-SSTATE_PKGSPEC    = "sstate:${PN}:${PACKAGE_ARCH}${TARGET_VENDOR}-${TARGET_OS}:${PV}:${PR}:${SSTATE_PKGARCH}:${SSTATE_VERSION}:"
-SSTATE_SWSPEC     = "sstate:${PN}::${PV}:${PR}::${SSTATE_VERSION}:"
+SSTATE_PV_INVARIANT ?= "0"
+SSTATE_SPEC_PV     = "${@'AnyPV' if d.getVar('SSTATE_PV_INVARIANT') == '1' else d.getVar('PV')}"
+SSTATE_SPEC_PR     = "${@'AnyPR' if d.getVar('SSTATE_PV_INVARIANT') == '1' else d.getVar('PR')}"
+SSTATE_PKGSPEC     = "sstate:${PN}:${PACKAGE_ARCH}${TARGET_VENDOR}-${TARGET_OS}:${SSTATE_SPEC_PV}:${SSTATE_SPEC_PR}:${SSTATE_PKGARCH}:${SSTATE_VERSION}:"
+SSTATE_SWSPEC      = "sstate:${PN}::${SSTATE_SPEC_PV}:${SSTATE_SPEC_PR}::${SSTATE_VERSION}:"
 SSTATE_PKGNAME    = "${SSTATE_EXTRAPATH}${@generate_sstatefn(d.getVar('SSTATE_PKGSPEC'), d.getVar('BB_UNIHASH'), d.getVar('SSTATE_CURRTASK'), False, d)}"
 SSTATE_PKG        = "${SSTATE_DIR}/${SSTATE_PKGNAME}"
 SSTATE_EXTRAPATH   = ""
@@ -132,6 +135,10 @@ SSTATE_HASHEQUIV_REPORT_TASKDATA[doc] = "Report additional useful data to the \
     data if the equivalence server is public. \
     "
 
+HASHEQUIV_ABI_AWARE_SHLIBS ?= "0"
+HASHEQUIV_ABI_HASH_VERSION ?= "4"
+HASHEQUIV_ABI_ONLY_SHLIBS ?= "0"
+
 python () {
     if bb.data.inherits_class('native', d):
         d.setVar('SSTATE_PKGARCH', d.getVar('BUILD_ARCH', False))
@@ -156,6 +163,9 @@ python () {
     unique_tasks = sorted(set((d.getVar('SSTATETASKS') or "").split()))
     d.setVar('SSTATETASKS', " ".join(unique_tasks))
     for task in unique_tasks:
+        d.appendVarFlag(task, 'vardeps', " SSTATE_PV_INVARIANT")
+        d.appendVarFlag(task, 'vardeps',
+                        " HASHEQUIV_ABI_AWARE_SHLIBS HASHEQUIV_ABI_HASH_VERSION HASHEQUIV_ABI_ONLY_SHLIBS")
         d.prependVarFlag(task, 'prefuncs', "sstate_task_prefunc ")
         # Generally sstate should be last, execpt for buildhistory functions
         postfuncs = (d.getVarFlag(task, 'postfuncs') or "").split()

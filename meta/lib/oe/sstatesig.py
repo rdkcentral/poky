@@ -491,6 +491,7 @@ def OEOuthashBasic(path, sigfile, task, d):
     import grp
     import re
     import fnmatch
+    import subprocess
 
     def update_hash(s):
         s = s.encode('utf-8')
@@ -512,6 +513,121 @@ def OEOuthashBasic(path, sigfile, task, d):
         include_root = False
     hash_version = d.getVar('HASHEQUIV_HASH_VERSION')
     extra_sigdata = d.getVar("HASHEQUIV_EXTRA_SIGDATA")
+
+    # When enabled, ELF shared libraries are hashed using a normalized public
+    # ABI descriptor rather than their full file content. Inspection failures
+    # still use content hashing. This experimental mode intentionally applies
+    # to every sstate task to evaluate broader dependency rebuild reduction.
+    abi_aware_shlibs = d.getVar('HASHEQUIV_ABI_AWARE_SHLIBS') == '1'
+    abi_only_shlibs = d.getVar('HASHEQUIV_ABI_ONLY_SHLIBS') == '1'
+    abi_hash_version = d.getVar('HASHEQUIV_ABI_HASH_VERSION') or '4'
+    readelf = d.getVar('READELF')
+
+    def abi_fallback(fpath, reason):
+        bb.debug(2, 'Hash equivalence ABI hash fallback for %s: %s' %
+                 (fpath, reason))
+        return None
+
+    def get_abi_hash(fpath):
+        if not readelf:
+            return abi_fallback(fpath, 'READELF is not configured')
+        try:
+            output = subprocess.check_output(
+                [readelf, '-W', '-h', '-d', '--dyn-syms',
+                 fpath],
+                stderr=subprocess.DEVNULL
+            ).decode('utf-8', errors='replace')
+        except (subprocess.CalledProcessError, OSError):
+            return abi_fallback(fpath, 'readelf inspection failed')
+
+        descriptor = [
+            'ABI-HASH-VERSION=%s' % abi_hash_version,
+        ]
+        elf_identity = {}
+        symbols = []
+        soname = None
+        needed = []
+        section = None
+        symbol_rows = False
+        for line in output.splitlines():
+            fields = line.split()
+            if line.startswith('  Class:'):
+                elf_identity['CLASS'] = line.split(':', 1)[1].strip()
+                continue
+            if line.startswith('  Data:'):
+                elf_identity['DATA'] = line.split(':', 1)[1].strip()
+                continue
+            if line.startswith('  OS/ABI:'):
+                elf_identity['OSABI'] = line.split(':', 1)[1].strip()
+                continue
+            if line.startswith('  Machine:'):
+                elf_identity['MACHINE'] = line.split(':', 1)[1].strip()
+                continue
+            if line.startswith('  Type:'):
+                elf_identity['TYPE'] = line.split(':', 1)[1].strip()
+                continue
+            if '(SONAME)' in line:
+                match = re.search(r'\[(.*)\]', line)
+                if not match:
+                    return abi_fallback(fpath, 'invalid SONAME entry')
+                soname = match.group(1)
+                continue
+            if '(NEEDED)' in line:
+                match = re.search(r'\[(.*)\]', line)
+                if not match:
+                    return abi_fallback(fpath, 'invalid NEEDED entry')
+                needed.append(match.group(1))
+                continue
+            if line.startswith('Symbol table'):
+                section = 'symbols'
+                continue
+            if section != 'symbols':
+                continue
+            # readelf --dyn-syms rows look like:
+            # Num: Value Size Type Bind Vis Ndx Name
+            # Skip headers, blank lines, and malformed rows. A malformed
+            # symbol row makes the descriptor unsafe, so fall back to the
+            # normal content hash instead of silently omitting it.
+            if not fields or fields[0] == 'Num:':
+                continue
+            if len(fields) < 8 or not re.match(r'^[0-9]+:$', fields[0]):
+                # The dynamic symbol table is followed by other readelf
+                # sections. Stop parsing when the next section begins.
+                if symbol_rows:
+                    section = None
+                continue
+            ndx = fields[6]
+            if ndx == 'UND':
+                continue
+            name = ' '.join(fields[7:])
+            if not name:
+                return abi_fallback(fpath, 'empty dynamic symbol name')
+            symbol_rows = True
+            # Keep the high-hit behavior of the original implementation:
+            # exported symbol names define the ABI identity. The newer ELF
+            # identity, SONAME, NEEDED, parsing, and fallback checks remain
+            # part of the descriptor.
+            symbols.append(name)
+
+        if not symbols:
+            return abi_fallback(fpath, 'no defined dynamic symbols')
+
+        if set(('CLASS', 'DATA', 'OSABI', 'MACHINE', 'TYPE')) - set(elf_identity):
+            return abi_fallback(fpath, 'incomplete ELF identity')
+
+        descriptor.extend('%s=%s' % item for item in sorted(elf_identity.items()))
+        descriptor.append('SONAME=%s' % (soname or '<none>'))
+        descriptor.extend('NEEDED=%s' % entry for entry in sorted(needed))
+        symbols.sort()
+        descriptor.extend(symbols)
+        abi_hash = hashlib.sha256()
+        abi_hash.update("\n".join(descriptor).encode('utf-8'))
+        bb.debug(2, 'Hash equivalence ABI hash applied to %s (%d symbols)' %
+                 (fpath, len(symbols)))
+        return abi_hash.hexdigest()
+
+    def is_shared_lib(fpath):
+        return bool(re.search(r'\.so(\.[0-9]+)*$', fpath))
 
     filemaps = {}
     for m in (d.getVar('SSTATE_HASHEQUIV_FILEMAP') or '').split():
@@ -546,6 +662,9 @@ def OEOuthashBasic(path, sigfile, task, d):
 
             def process(path):
                 s = os.lstat(path)
+
+                if abi_only_shlibs and not is_shared_lib(path):
+                    return
 
                 if stat.S_ISDIR(s.st_mode):
                     update_hash('d')
@@ -614,15 +733,25 @@ def OEOuthashBasic(path, sigfile, task, d):
                     if fnmatch.fnmatch(path, entry):
                         filterfile = True
 
+                abi_hash = None
+                if abi_aware_shlibs and stat.S_ISREG(s.st_mode) and not filterfile and is_shared_lib(path):
+                    abi_hash = get_abi_hash(path)
+
                 update_hash(" ")
-                if stat.S_ISREG(s.st_mode) and not filterfile:
+                if stat.S_ISREG(s.st_mode) and not filterfile and abi_hash is None:
                     update_hash("%10d" % s.st_size)
                 else:
+                    # Real file size is omitted for ABI-hashed shared
+                    # libraries since it will differ from a previous build
+                    # even when the exported ABI (and thus the hash used
+                    # below) is identical.
                     update_hash(" " * 10)
 
                 update_hash(" ")
                 fh = hashlib.sha256()
-                if stat.S_ISREG(s.st_mode):
+                if abi_hash is not None:
+                    update_hash(abi_hash)
+                elif stat.S_ISREG(s.st_mode):
                     # Hash file contents
                     if filterfile:
                         # Need to ignore paths in crossscripts and postinst-useradd files.
@@ -668,5 +797,3 @@ def OEOuthashBasic(path, sigfile, task, d):
         os.chdir(prev_dir)
 
     return h.hexdigest()
-
-
