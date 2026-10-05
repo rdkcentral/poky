@@ -633,16 +633,20 @@ def OEOuthashBasic(path, sigfile, task, d):
         if not readelf:
             return False
         try:
+            if not stat.S_ISREG(os.stat(fpath).st_mode):
+                return False
             with open(fpath, 'rb') as stream:
                 if stream.read(4) != b'\x7fELF':
                     return False
             output = subprocess.check_output(
-                [readelf, '-h', fpath],
+                [readelf, '-W', '-h', '-d', fpath],
                 stderr=subprocess.DEVNULL
             ).decode('utf-8', errors='replace')
         except (OSError, subprocess.CalledProcessError):
+            return True
+        if not re.search(r'^\s*Type:\s+DYN\s+', output, re.MULTILINE):
             return False
-        return bool(re.search(r'^\s*Type:\s+DYN\s+', output, re.MULTILINE))
+        return not bool(re.search(r'\(FLAGS_1\).*?\bPIE\b', output))
 
     filemaps = {}
     for m in (d.getVar('SSTATE_HASHEQUIV_FILEMAP') or '').split():
