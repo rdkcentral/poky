@@ -596,11 +596,13 @@ def OEOuthashBasic(path, sigfile, task, d):
                 if symbol_rows:
                     section = None
                 continue
-            if len(fields) < 8:
+            if len(fields) < 7:
                 return abi_fallback(fpath, 'malformed dynamic symbol row')
             ndx = fields[6]
             if ndx == 'UND':
                 continue
+            if len(fields) < 8:
+                return abi_fallback(fpath, 'missing dynamic symbol name')
             name = ' '.join(fields[7:])
             if not name:
                 return abi_fallback(fpath, 'empty dynamic symbol name')
