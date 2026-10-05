@@ -634,7 +634,13 @@ def OEOuthashBasic(path, sigfile, task, d):
             dynamic_flag = False
             for tag in ('FLAGS', 'FLAGS_1'):
                 if '(%s)' % tag in line:
-                    match = re.search(r'\bFlags:\s*(\S(?:.*?\S)?)\s*$', line)
+                    if tag == 'FLAGS':
+                        match = re.search(
+                            r'\(%s\)\s+(\S(?:.*?\S)?)\s*$' % tag, line)
+                    else:
+                        match = re.search(
+                            r'\(%s\).*?\bFlags:\s*(\S(?:.*?\S)?)\s*$' % tag,
+                            line)
                     if not match:
                         return abi_fallback(fpath, 'invalid %s entry' % tag)
                     dynamic_flags.append((tag, ' '.join(match.group(1).split())))
@@ -708,7 +714,7 @@ def OEOuthashBasic(path, sigfile, task, d):
         descriptor.extend('DYN-%s=%s' % item for item in dynamic_flags)
         descriptor.extend(
             'VERSION-NEEDED=%s:%s' % item
-            for item in version_requirements)
+            for item in sorted(version_requirements))
         symbols.sort()
         descriptor.extend(symbols)
         abi_hash = hashlib.sha256()
