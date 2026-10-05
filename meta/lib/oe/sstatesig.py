@@ -640,8 +640,6 @@ def OEOuthashBasic(path, sigfile, task, d):
         return abi_hash.hexdigest()
 
     def is_shared_lib(fpath):
-        if not readelf:
-            return False
         try:
             resolved = os.path.realpath(fpath)
             if (resolved != output_root and
@@ -652,12 +650,17 @@ def OEOuthashBasic(path, sigfile, task, d):
             with open(resolved, 'rb') as stream:
                 if stream.read(4) != b'\x7fELF':
                     return False
+        except OSError:
+            return False
+        if not readelf:
+            return None
+        try:
             output = subprocess.check_output(
                 [readelf, '-W', '-h', '-d', '-l', resolved],
                 stderr=subprocess.DEVNULL
             ).decode('utf-8', errors='replace')
         except (OSError, subprocess.CalledProcessError):
-            return False
+            return None
         if not re.search(r'^\s*Type:\s+DYN\s+', output, re.MULTILINE):
             return False
         if not re.search(r'^\s*LOAD\s+', output, re.MULTILINE):
@@ -700,7 +703,11 @@ def OEOuthashBasic(path, sigfile, task, d):
             def process(path):
                 s = os.lstat(path)
 
-                if abi_only_shlibs and not is_shared_lib(path):
+                shared_lib = None
+                if abi_aware_shlibs or abi_only_shlibs:
+                    shared_lib = is_shared_lib(path)
+
+                if abi_only_shlibs and shared_lib is False:
                     return
 
                 if stat.S_ISDIR(s.st_mode):
@@ -771,7 +778,8 @@ def OEOuthashBasic(path, sigfile, task, d):
                         filterfile = True
 
                 abi_hash = None
-                if abi_aware_shlibs and stat.S_ISREG(s.st_mode) and not filterfile and is_shared_lib(path):
+                if (abi_aware_shlibs and stat.S_ISREG(s.st_mode) and
+                        not filterfile and shared_lib is True):
                     abi_hash = get_abi_hash(path)
 
                 update_hash(" ")
