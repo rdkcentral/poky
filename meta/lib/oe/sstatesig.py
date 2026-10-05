@@ -576,10 +576,13 @@ def OEOuthashBasic(path, sigfile, task, d):
             if 'Name:' in line:
                 match = re.search(
                     r'\bName:\s+(\S+).*?\bVersion:\s+(\d+)', line)
-                if not match or not version_provider:
+                flags_match = re.search(
+                    r'\bFlags:\s+(\S(?:.*?\S)?)\s+Version:', line)
+                if not match or not flags_match or not version_provider:
                     return abi_fallback(fpath, 'malformed version requirement')
                 version_requirements.append(
-                    (version_provider, match.group(1)))
+                    (version_provider, '%s FLAGS=%s' %
+                     (match.group(1), flags_match.group(1))))
 
         section = None
         symbol_rows = False
