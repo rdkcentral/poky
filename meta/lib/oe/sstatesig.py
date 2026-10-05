@@ -540,6 +540,13 @@ def OEOuthashBasic(path, sigfile, task, d):
             ).decode('utf-8', errors='replace')
         except (subprocess.CalledProcessError, OSError):
             return abi_fallback(fpath, 'readelf inspection failed')
+        try:
+            version_output = subprocess.check_output(
+                [readelf, '-W', '--version-info', fpath],
+                stderr=subprocess.DEVNULL
+            ).decode('utf-8', errors='replace')
+        except (subprocess.CalledProcessError, OSError):
+            return abi_fallback(fpath, 'readelf version inspection failed')
 
         descriptor = [
             'ABI-HASH-VERSION=%s' % abi_hash_version,
@@ -549,6 +556,31 @@ def OEOuthashBasic(path, sigfile, task, d):
         soname = None
         needed = []
         runtime_paths = []
+        version_requirements = []
+        version_needs_section = False
+        version_provider = None
+        for line in version_output.splitlines():
+            if line.startswith('Version needs section'):
+                version_needs_section = True
+                continue
+            if not version_needs_section:
+                continue
+            if line.startswith('Version definition section'):
+                break
+            file_match = re.search(r'\bFile:\s+(\S+)', line)
+            if file_match:
+                if not re.search(r'\bVersion:\s+\d+', line):
+                    return abi_fallback(fpath, 'malformed version provider')
+                version_provider = file_match.group(1)
+                continue
+            if 'Name:' in line:
+                match = re.search(
+                    r'\bName:\s+(\S+).*?\bVersion:\s+(\d+)', line)
+                if not match or not version_provider:
+                    return abi_fallback(fpath, 'malformed version requirement')
+                version_requirements.append(
+                    (version_provider, match.group(1)))
+
         section = None
         symbol_rows = False
         for line in output.splitlines():
@@ -644,6 +676,9 @@ def OEOuthashBasic(path, sigfile, task, d):
         descriptor.append('SONAME=%s' % (soname or '<none>'))
         descriptor.extend('NEEDED=%s' % entry for entry in needed)
         descriptor.extend('%s=%s' % item for item in runtime_paths)
+        descriptor.extend(
+            'VERSION-NEEDED=%s:%s' % item
+            for item in version_requirements)
         symbols.sort()
         descriptor.extend(symbols)
         abi_hash = hashlib.sha256()
@@ -664,6 +699,8 @@ def OEOuthashBasic(path, sigfile, task, d):
                 if stream.read(4) != b'\x7fELF':
                     return False
         except OSError:
+            if os.path.islink(fpath):
+                return None
             return False
         if not readelf:
             return None
