@@ -548,6 +548,7 @@ def OEOuthashBasic(path, sigfile, task, d):
         symbols = []
         soname = None
         needed = []
+        runtime_paths = []
         section = None
         symbol_rows = False
         for line in output.splitlines():
@@ -587,6 +588,17 @@ def OEOuthashBasic(path, sigfile, task, d):
                 if not match:
                     return abi_fallback(fpath, 'invalid NEEDED entry')
                 needed.append(match.group(1))
+                continue
+            runtime_path = False
+            for tag in ('RPATH', 'RUNPATH'):
+                if '(%s)' % tag in line:
+                    match = re.search(r'\[(.*)\]', line)
+                    if not match:
+                        return abi_fallback(fpath, 'invalid %s entry' % tag)
+                    runtime_paths.append((tag, match.group(1)))
+                    runtime_path = True
+                    break
+            if runtime_path:
                 continue
             if line.startswith('Symbol table'):
                 section = 'symbols'
@@ -631,6 +643,7 @@ def OEOuthashBasic(path, sigfile, task, d):
         descriptor.extend('%s=%s' % item for item in sorted(elf_identity.items()))
         descriptor.append('SONAME=%s' % (soname or '<none>'))
         descriptor.extend('NEEDED=%s' % entry for entry in needed)
+        descriptor.extend('%s=%s' % item for item in runtime_paths)
         symbols.sort()
         descriptor.extend(symbols)
         abi_hash = hashlib.sha256()
