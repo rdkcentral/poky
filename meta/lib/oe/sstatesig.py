@@ -590,12 +590,14 @@ def OEOuthashBasic(path, sigfile, task, d):
             # normal content hash instead of silently omitting it.
             if not fields or fields[0] == 'Num:':
                 continue
-            if len(fields) < 8 or not re.match(r'^[0-9]+:$', fields[0]):
+            if not re.match(r'^[0-9]+:$', fields[0]):
                 # The dynamic symbol table is followed by other readelf
                 # sections. Stop parsing when the next section begins.
                 if symbol_rows:
                     section = None
                 continue
+            if len(fields) < 8:
+                return abi_fallback(fpath, 'malformed dynamic symbol row')
             ndx = fields[6]
             if ndx == 'UND':
                 continue
