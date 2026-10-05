@@ -665,7 +665,7 @@ def OEOuthashBasic(path, sigfile, task, d):
                 return abi_fallback(fpath, 'empty dynamic symbol name')
             symbol_rows = True
             symbol = '%s %s %s %s' % (fields[3], fields[4], fields[5], name)
-            if fields[3] in ('OBJECT', 'TLS'):
+            if fields[3] in ('OBJECT', 'TLS', 'COMMON'):
                 symbol = '%s SIZE=%s' % (symbol, fields[2])
             symbols.append(symbol)
 
