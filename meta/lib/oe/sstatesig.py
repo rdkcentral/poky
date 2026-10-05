@@ -628,7 +628,19 @@ def OEOuthashBasic(path, sigfile, task, d):
         return abi_hash.hexdigest()
 
     def is_shared_lib(fpath):
-        return bool(re.search(r'\.so(\.[0-9]+)*$', fpath))
+        if not readelf:
+            return False
+        try:
+            with open(fpath, 'rb') as stream:
+                if stream.read(4) != b'\x7fELF':
+                    return False
+            output = subprocess.check_output(
+                [readelf, '-h', fpath],
+                stderr=subprocess.DEVNULL
+            ).decode('utf-8', errors='replace')
+        except (OSError, subprocess.CalledProcessError):
+            return False
+        return bool(re.search(r'^\s*Type:\s+DYN\s+', output, re.MULTILINE))
 
     filemaps = {}
     for m in (d.getVar('SSTATE_HASHEQUIV_FILEMAP') or '').split():
