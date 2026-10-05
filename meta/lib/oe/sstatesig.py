@@ -514,17 +514,12 @@ def OEOuthashBasic(path, sigfile, task, d):
     hash_version = d.getVar('HASHEQUIV_HASH_VERSION')
     extra_sigdata = d.getVar("HASHEQUIV_EXTRA_SIGDATA")
 
-    # When enabled for a dependency-facing task, ELF shared libraries are
-    # hashed using a normalized public ABI descriptor rather than their full
-    # file content. Inspection failures still use content hashing. Final
-    # package and deployment artifacts retain full-content hashing.
-    abi_hash_tasks = (d.getVar('HASHEQUIV_ABI_TASKS') or
-                      'populate_sysroot').split()
-    abi_hash_enabled = task in abi_hash_tasks
-    abi_aware_shlibs = abi_hash_enabled and \
-        d.getVar('HASHEQUIV_ABI_AWARE_SHLIBS') == '1'
-    abi_only_shlibs = abi_hash_enabled and \
-        d.getVar('HASHEQUIV_ABI_ONLY_SHLIBS') == '1'
+    # When enabled, ELF shared libraries are hashed using a normalized public
+    # ABI descriptor rather than their full file content. Inspection failures
+    # still use content hashing. This experimental mode intentionally applies
+    # to every sstate task to evaluate broader dependency rebuild reduction.
+    abi_aware_shlibs = d.getVar('HASHEQUIV_ABI_AWARE_SHLIBS') == '1'
+    abi_only_shlibs = d.getVar('HASHEQUIV_ABI_ONLY_SHLIBS') == '1'
     abi_hash_version = d.getVar('HASHEQUIV_ABI_HASH_VERSION') or '4'
     readelf = d.getVar('READELF')
 
