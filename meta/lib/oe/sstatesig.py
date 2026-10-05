@@ -598,6 +598,12 @@ def OEOuthashBasic(path, sigfile, task, d):
             if line.startswith('  OS/ABI:'):
                 elf_identity['OSABI'] = line.split(':', 1)[1].strip()
                 continue
+            if line.startswith('  ABI Version:'):
+                match = re.match(r'^\s*ABI Version:\s+(\d+)', line)
+                if not match:
+                    return abi_fallback(fpath, 'invalid ELF ABI version')
+                elf_identity['ABIVERSION'] = match.group(1)
+                continue
             if line.startswith('  Machine:'):
                 elf_identity['MACHINE'] = line.split(':', 1)[1].strip()
                 continue
@@ -692,7 +698,7 @@ def OEOuthashBasic(path, sigfile, task, d):
         if not symbols:
             return abi_fallback(fpath, 'no defined dynamic symbols')
 
-        if set(('CLASS', 'DATA', 'OSABI', 'MACHINE', 'TYPE', 'FLAGS')) - set(elf_identity):
+        if set(('CLASS', 'DATA', 'OSABI', 'ABIVERSION', 'MACHINE', 'TYPE', 'FLAGS')) - set(elf_identity):
             return abi_fallback(fpath, 'incomplete ELF identity')
 
         descriptor.extend('%s=%s' % item for item in sorted(elf_identity.items()))
