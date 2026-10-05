@@ -566,6 +566,15 @@ def OEOuthashBasic(path, sigfile, task, d):
             if line.startswith('  Type:'):
                 elf_identity['TYPE'] = line.split(':', 1)[1].strip()
                 continue
+            if line.startswith('  Flags:'):
+                match = re.match(r'^\s*Flags:\s+(0x[0-9a-fA-F]+|\d+)', line)
+                if not match:
+                    return abi_fallback(fpath, 'invalid ELF flags')
+                try:
+                    elf_identity['FLAGS'] = '0x%x' % int(match.group(1), 0)
+                except ValueError:
+                    return abi_fallback(fpath, 'invalid ELF flags')
+                continue
             if '(SONAME)' in line:
                 match = re.search(r'\[(.*)\]', line)
                 if not match:
@@ -615,12 +624,12 @@ def OEOuthashBasic(path, sigfile, task, d):
         if not symbols:
             return abi_fallback(fpath, 'no defined dynamic symbols')
 
-        if set(('CLASS', 'DATA', 'OSABI', 'MACHINE', 'TYPE')) - set(elf_identity):
+        if set(('CLASS', 'DATA', 'OSABI', 'MACHINE', 'TYPE', 'FLAGS')) - set(elf_identity):
             return abi_fallback(fpath, 'incomplete ELF identity')
 
         descriptor.extend('%s=%s' % item for item in sorted(elf_identity.items()))
         descriptor.append('SONAME=%s' % (soname or '<none>'))
-        descriptor.extend('NEEDED=%s' % entry for entry in sorted(needed))
+        descriptor.extend('NEEDED=%s' % entry for entry in needed)
         symbols.sort()
         descriptor.extend(symbols)
         abi_hash = hashlib.sha256()
