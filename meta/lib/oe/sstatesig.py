@@ -514,12 +514,17 @@ def OEOuthashBasic(path, sigfile, task, d):
     hash_version = d.getVar('HASHEQUIV_HASH_VERSION')
     extra_sigdata = d.getVar("HASHEQUIV_EXTRA_SIGDATA")
 
-    # When enabled, ELF shared libraries are hashed using a normalized public
-    # ABI descriptor rather than their full file content. Inspection failures
-    # still use content hashing. This experimental mode intentionally applies
-    # to every sstate task to evaluate broader dependency rebuild reduction.
-    abi_aware_shlibs = d.getVar('HASHEQUIV_ABI_AWARE_SHLIBS') == '1'
-    abi_only_shlibs = d.getVar('HASHEQUIV_ABI_ONLY_SHLIBS') == '1'
+    # When enabled for a dependency-facing task, ELF shared libraries are
+    # hashed using a normalized public ABI descriptor rather than their full
+    # file content. Inspection failures still use content hashing. Final
+    # package and deployment artifacts retain full-content hashing.
+    abi_hash_tasks = (d.getVar('HASHEQUIV_ABI_TASKS') or
+                      'populate_sysroot').split()
+    abi_hash_enabled = task in abi_hash_tasks
+    abi_aware_shlibs = abi_hash_enabled and \
+        d.getVar('HASHEQUIV_ABI_AWARE_SHLIBS') == '1'
+    abi_only_shlibs = abi_hash_enabled and \
+        d.getVar('HASHEQUIV_ABI_ONLY_SHLIBS') == '1'
     abi_hash_version = d.getVar('HASHEQUIV_ABI_HASH_VERSION') or '4'
     readelf = d.getVar('READELF')
 
@@ -590,12 +595,14 @@ def OEOuthashBasic(path, sigfile, task, d):
             # normal content hash instead of silently omitting it.
             if not fields or fields[0] == 'Num:':
                 continue
-            if len(fields) < 8 or not re.match(r'^[0-9]+:$', fields[0]):
+            if not re.match(r'^[0-9]+:$', fields[0]):
                 # The dynamic symbol table is followed by other readelf
                 # sections. Stop parsing when the next section begins.
                 if symbol_rows:
                     section = None
                 continue
+            if len(fields) < 8:
+                return abi_fallback(fpath, 'malformed dynamic symbol row')
             ndx = fields[6]
             if ndx == 'UND':
                 continue
@@ -603,11 +610,10 @@ def OEOuthashBasic(path, sigfile, task, d):
             if not name:
                 return abi_fallback(fpath, 'empty dynamic symbol name')
             symbol_rows = True
-            # Keep the high-hit behavior of the original implementation:
-            # exported symbol names define the ABI identity. The newer ELF
-            # identity, SONAME, NEEDED, parsing, and fallback checks remain
-            # part of the descriptor.
-            symbols.append(name)
+            symbol = '%s %s %s %s' % (fields[3], fields[4], fields[5], name)
+            if fields[3] in ('OBJECT', 'TLS'):
+                symbol = '%s SIZE=%s' % (symbol, fields[2])
+            symbols.append(symbol)
 
         if not symbols:
             return abi_fallback(fpath, 'no defined dynamic symbols')
