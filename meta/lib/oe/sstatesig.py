@@ -511,6 +511,7 @@ def OEOuthashBasic(path, sigfile, task, d):
     if task == "package":
         include_timestamps = True
         include_root = False
+    output_root = os.path.realpath(path)
     hash_version = d.getVar('HASHEQUIV_HASH_VERSION')
     extra_sigdata = d.getVar("HASHEQUIV_EXTRA_SIGDATA")
 
@@ -642,18 +643,26 @@ def OEOuthashBasic(path, sigfile, task, d):
         if not readelf:
             return False
         try:
-            if not stat.S_ISREG(os.stat(fpath).st_mode):
+            resolved = os.path.realpath(fpath)
+            if (resolved != output_root and
+                    not resolved.startswith(output_root + os.sep)):
                 return False
-            with open(fpath, 'rb') as stream:
+            if not stat.S_ISREG(os.stat(resolved).st_mode):
+                return False
+            with open(resolved, 'rb') as stream:
                 if stream.read(4) != b'\x7fELF':
                     return False
             output = subprocess.check_output(
-                [readelf, '-W', '-h', '-d', fpath],
+                [readelf, '-W', '-h', '-d', '-l', resolved],
                 stderr=subprocess.DEVNULL
             ).decode('utf-8', errors='replace')
         except (OSError, subprocess.CalledProcessError):
-            return True
+            return False
         if not re.search(r'^\s*Type:\s+DYN\s+', output, re.MULTILINE):
+            return False
+        if not re.search(r'^\s*LOAD\s+', output, re.MULTILINE):
+            return False
+        if not re.search(r'^\s*DYNAMIC\s+', output, re.MULTILINE):
             return False
         return not bool(re.search(r'\(FLAGS_1\).*?\bPIE\b', output))
 
