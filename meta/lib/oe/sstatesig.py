@@ -556,6 +556,7 @@ def OEOuthashBasic(path, sigfile, task, d):
         soname = None
         needed = []
         runtime_paths = []
+        dynamic_flags = []
         version_requirements = []
         version_needs_section = False
         version_provider = None
@@ -624,6 +625,20 @@ def OEOuthashBasic(path, sigfile, task, d):
                     return abi_fallback(fpath, 'invalid NEEDED entry')
                 needed.append(match.group(1))
                 continue
+            dynamic_flag = False
+            for tag in ('FLAGS', 'FLAGS_1'):
+                if '(%s)' % tag in line:
+                    match = re.search(r'\bFlags:\s*(\S(?:.*?\S)?)\s*$', line)
+                    if not match:
+                        return abi_fallback(fpath, 'invalid %s entry' % tag)
+                    dynamic_flags.append((tag, ' '.join(match.group(1).split())))
+                    dynamic_flag = True
+                    break
+            if dynamic_flag:
+                continue
+            if line.startswith('Symbol table'):
+                section = 'symbols'
+                continue
             runtime_path = False
             for tag in ('RPATH', 'RUNPATH'):
                 if '(%s)' % tag in line:
@@ -665,6 +680,11 @@ def OEOuthashBasic(path, sigfile, task, d):
                 return abi_fallback(fpath, 'empty dynamic symbol name')
             symbol_rows = True
             symbol = '%s %s %s %s' % (fields[3], fields[4], fields[5], name)
+            if ndx == 'ABS':
+                try:
+                    symbol = '%s ABS-VALUE=0x%x' % (symbol, int(fields[1], 16))
+                except ValueError:
+                    return abi_fallback(fpath, 'invalid absolute symbol value')
             if fields[3] in ('OBJECT', 'TLS', 'COMMON'):
                 symbol = '%s SIZE=%s' % (symbol, fields[2])
             symbols.append(symbol)
@@ -679,6 +699,7 @@ def OEOuthashBasic(path, sigfile, task, d):
         descriptor.append('SONAME=%s' % (soname or '<none>'))
         descriptor.extend('NEEDED=%s' % entry for entry in needed)
         descriptor.extend('%s=%s' % item for item in runtime_paths)
+        descriptor.extend('DYN-%s=%s' % item for item in dynamic_flags)
         descriptor.extend(
             'VERSION-NEEDED=%s:%s' % item
             for item in version_requirements)
