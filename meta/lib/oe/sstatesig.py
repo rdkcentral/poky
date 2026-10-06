@@ -521,7 +521,7 @@ def OEOuthashBasic(path, sigfile, task, d):
     # to every sstate task to evaluate broader dependency rebuild reduction.
     abi_aware_shlibs = d.getVar('HASHEQUIV_ABI_AWARE_SHLIBS') == '1'
     abi_only_shlibs = d.getVar('HASHEQUIV_ABI_ONLY_SHLIBS') == '1'
-    abi_hash_version = d.getVar('HASHEQUIV_ABI_HASH_VERSION') or '4'
+    abi_hash_version = d.getVar('HASHEQUIV_ABI_HASH_VERSION') or '13'
     readelf = d.getVar('READELF')
 
     def abi_fallback(fpath, reason):
