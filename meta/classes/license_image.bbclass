@@ -1,3 +1,5 @@
+# Last Changes by Arikrishnan G - 13-Oct-2026
+
 ROOTFS_LICENSE_DIR = "${IMAGE_ROOTFS}/usr/share/common-licenses"
 
 # This requires LICENSE_CREATE_PACKAGE=1 to work too
