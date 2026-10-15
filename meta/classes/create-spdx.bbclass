@@ -765,6 +765,7 @@ addtask do_create_runtime_spdx_setscene
 do_create_runtime_spdx[dirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[cleandirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[rdeptask] = "do_create_spdx"
+do_create_runtime_spdx[recrdeptask] += "do_create_spdx"
 
 #
 # SPDX bundle import support
