@@ -1,3 +1,5 @@
+# Last Changes by Arikrishnan G - 13-Oct-2026
+
 ROOTFS_LICENSE_DIR = "${IMAGE_ROOTFS}/usr/share/common-licenses"
 
 # This requires LICENSE_CREATE_PACKAGE=1 to work too
@@ -26,10 +28,6 @@ python write_package_manifest() {
 python license_create_manifest() {
     import oe.packagedata
     from oe.rootfs import image_list_installed_packages
-
-    build_images_from_feeds = d.getVar('BUILD_IMAGES_FROM_FEEDS')
-    if build_images_from_feeds == "1":
-        return 0
 
     pkg_dic = {}
     for pkg in sorted(image_list_installed_packages(d)):
