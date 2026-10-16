@@ -45,16 +45,27 @@ class Crate(Wget):
 
         super(Crate, self).urldata_init(ud, d)
 
+    def _generate_index_path(self, name):
+        # https://doc.rust-lang.org/cargo/reference/registry-index.html#index-files
+        if len(name) == 1:
+            return f"1/{name}"
+        elif len(name) == 2:
+            return f"2/{name}"
+        elif len(name) == 3:
+            return f"3/{name[0]}/{name}"
+        else:
+            return f"{name[0:2]}/{name[2:4]}/{name}"
+
     def _crate_urldata_init(self, ud, d):
         """
         Sets up the download for a crate
         """
 
-        # URL syntax is: crate://NAME/VERSION
+        # URL syntax is: crate://HOST/NAME/VERSION
         # break the URL apart by /
         parts = ud.url.split('/')
         if len(parts) < 5:
-            raise bb.fetch2.ParameterError("Invalid URL: Must be crate://HOST/NAME/VERSION", ud.url)
+            raise bb.fetch.ParameterError("Invalid URL: Must be crate://HOST/NAME/VERSION", ud.url)
 
         # version is expected to be the last token
         # but ignore possible url parameters which will be used
@@ -65,15 +76,26 @@ class Crate(Wget):
         # host (this is to allow custom crate registries to be specified
         host = '/'.join(parts[2:-2])
 
-        # if using upstream just fix it up nicely
+        if 'protocol' in ud.parm:
+            proto = ud.parm['protocol']
+        else:
+            proto = 'https'
+
+        # If using crates.io use the CDN directly as per https://crates.io/data-access
         if host == 'crates.io':
-            host = 'crates.io/api/v1/crates'
+            if proto != 'https':
+                bb.warn("URL: %s does the %s protocol which is not supported by crates.io. Please change to ;protocol=https in the url." % (ud.url, proto))
+            ud.url = "https://static.crates.io/crates/%s/%s/download" % (name, version)
+            ud.versionsurl = 'https://index.crates.io/' + self._generate_index_path(name)
+        else:
+            ud.url = "%s://%s/%s/%s/download" % (proto, host, name, version)
+            ud.versionsurl = "%s://%s/%s/versions" % (proto, host, name)
 
-        ud.url = "https://%s/%s/%s/download" % (host, name, version)
         ud.parm['downloadfilename'] = "%s-%s.crate" % (name, version)
-        ud.parm['name'] = name
+        if 'name' not in ud.parm:
+            ud.parm['name'] = '%s-%s' % (name, version)
 
-        logger.debug("Fetching %s to %s" % (ud.url, ud.parm['downloadfilename']))
+        logger.debug2("Fetching %s to %s" % (ud.url, ud.parm['downloadfilename']))
 
     def unpack(self, ud, rootdir, d):
         """
