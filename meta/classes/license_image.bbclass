@@ -29,6 +29,11 @@ python license_create_manifest() {
     import oe.packagedata
     from oe.rootfs import image_list_installed_packages
 
+    build_images_from_feeds = d.getVar('BUILD_IMAGES_FROM_FEEDS')
+    generate_license_manifest = d.getVar('GENERATE_LICENSE_MANIFEST') or "0"
+    if build_images_from_feeds == "1" and generate_license_manifest != "1":	
+        return 0
+
     pkg_dic = {}
     for pkg in sorted(image_list_installed_packages(d)):
         pkg_info = os.path.join(d.getVar('PKGDATA_DIR'),
